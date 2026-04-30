@@ -229,7 +229,7 @@ async function runAnalysis(){
 
   var proxyUrl=getProxyUrl();
   try{
-    var resp=await fetch(proxyUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:userContent}]})});
+    var resp=await fetch(proxyUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({messages:[{role:'user',content:userContent}]})});
     var data=await resp.json();
     if(!data.ok)throw new Error(data.error||'Proxy error');
     var clean=data.content.replace(/```json|```/g,'').trim();
