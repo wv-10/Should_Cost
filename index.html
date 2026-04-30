@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Should Cost Analyzer — Tenstorrent Sourcing</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f4f0;color:#1a1a18;min-height:100vh;padding:2rem 1rem}
+  .container{max-width:720px;margin:0 auto}
+  h1{font-size:22px;font-weight:500;margin-bottom:6px}
+  .subtitle{font-size:13px;color:#666;margin-bottom:1.5rem}
+  .steps{display:flex;align-items:center;gap:6px;margin-bottom:1.5rem}
+  .step-dot{display:flex;align-items:center;gap:5px}
+  .step-num{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;border:1px solid #ccc;background:#eee;color:#999}
+  .step-num.active{background:#dbeafe;color:#1d4ed8;border-color:#93c5fd}
+  .step-label{font-size:12px;color:#999}
+  .step-label.active{color:#1a1a18}
+  .step-sep{font-size:11px;color:#ccc}
+  .card{background:#fff;border:1px solid #e5e4de;border-radius:12px;padding:1rem 1.25rem;margin-bottom:12px}
+  .chip-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:9px;margin-bottom:1rem}
+  .chip{background:#fff;border:1px solid #e5e4de;border-radius:12px;padding:.9rem 1rem;cursor:pointer;transition:border-color .15s}
+  .chip:hover{border-color:#93c5fd}
+  .chip h3{font-size:14px;font-weight:500;margin-bottom:3px}
+  .chip p{font-size:12px;color:#666;line-height:1.5}
+  label{display:block;font-size:13px;color:#555;margin-bottom:6px}
+  input,select,textarea{width:100%;padding:8px 12px;font-size:13px;border:1px solid #d1d0c8;border-radius:8px;background:#fff;font-family:inherit;color:#1a1a18;outline:none;transition:border-color .15s}
+  input:focus,select:focus,textarea:focus{border-color:#93c5fd}
+  textarea{resize:vertical}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+  .form-group{margin-bottom:14px}
+  button{padding:9px 22px;font-size:14px;font-weight:500;cursor:pointer;background:#fff;border:1px solid #d1d0c8;border-radius:8px;color:#1a1a18;transition:background .15s}
+  button:hover{background:#f0efe9}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .btn-primary{background:#1d4ed8;color:#fff;border-color:#1d4ed8}
+  .btn-primary:hover:not(:disabled){background:#1e40af}
+  .badge{display:inline-block;font-size:12px;padding:3px 10px;border-radius:8px;font-weight:500}
+  .badge-info{background:#dbeafe;color:#1d4ed8;border:1px solid #93c5fd}
+  .back-btn{font-size:13px;padding:3px 10px;cursor:pointer;background:#f0efe9;border:1px solid #e5e4de;border-radius:8px;display:none}
+  .drop-zone{border:2px dashed #d1d0c8;border-radius:12px;padding:1.25rem;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;margin-bottom:14px}
+  .drop-zone:hover,.drop-zone.drag-over{border-color:#93c5fd;background:#f0f7ff}
+  .drop-zone.has-file{border-color:#6ee7b7;background:#f0fdf4}
+  .metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:9px;margin-bottom:12px}
+  .metric{background:#f5f4f0;border-radius:8px;padding:.9rem 1rem}
+  .metric-label{font-size:12px;color:#666;margin-bottom:3px}
+  .metric-val{font-size:22px;font-weight:500;font-family:'SF Mono',Consolas,monospace}
+  .section-label{font-size:11px;font-weight:500;color:#888;letter-spacing:.07em;text-transform:uppercase;margin-bottom:10px}
+  table{width:100%;border-collapse:collapse}
+  th{text-align:left;padding:5px 0;font-size:12px;font-weight:500;color:#666;border-bottom:1px solid #e5e4de}
+  td{padding:7px 0;font-size:13px;border-bottom:1px solid #f0efe9;vertical-align:top}
+  .mono{font-family:'SF Mono',Consolas,monospace}
+  .tag{font-size:11px;padding:2px 8px;border-radius:6px;font-weight:500;white-space:nowrap}
+  .tag-high{background:#fee2e2;color:#b91c1c}
+  .tag-medium{background:#fef9c3;color:#854d0e}
+  .tag-low{background:#dcfce7;color:#15803d}
+  .lever-item{border-left:2px solid #93c5fd;padding-left:10px;margin-bottom:10px}
+  .risk-item{margin-bottom:10px}
+  .driver-item{display:flex;gap:8px;align-items:flex-start;margin-bottom:9px}
+  .drawing-banner{background:#dbeafe;border:1px solid #93c5fd;border-radius:12px;padding:.75rem 1.25rem;margin-bottom:12px}
+  .missing-banner{background:#fef9c3;border:1px solid #fde047;border-radius:12px;padding:.75rem 1.25rem;margin-top:4px}
+  .pill{font-size:12px;padding:3px 10px;border-radius:6px;background:#fff;border:1px solid #fde047;color:#854d0e;display:inline-block;margin:3px}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+  .err{font-size:13px;color:#dc2626;display:none;margin-top:8px}
+  .loading{display:none;padding:1rem 0;color:#666}
+  img#img-thumb{max-height:100px;margin-top:8px;border-radius:8px;border:1px solid #e5e4de;display:none}
+  .config-banner{background:#fff;border:1px solid #fde047;border-radius:12px;padding:.85rem 1.25rem;margin-bottom:1.25rem;display:flex;align-items:flex-start;gap:12px}
+  .config-banner.configured{border-color:#6ee7b7;background:#f0fdf4}
+  @media(max-width:500px){.form-row,.two-col{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ── Proxy URL config banner ── -->
+  <div class="config-banner" id="config-banner">
+    <div style="flex:1">
+      <p style="font-size:13px;font-weight:500;color:#854d0e;margin-bottom:6px">Paste your GAS Proxy URL to activate</p>
+      <div style="display:flex;gap:8px">
+        <input id="proxy-url-input" type="text" placeholder="https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec" style="flex:1;font-size:12px">
+        <button onclick="saveProxyUrl()" style="padding:6px 14px;font-size:13px;white-space:nowrap">Save</button>
+      </div>
+      <p style="font-size:11px;color:#999;margin-top:5px">This is saved in your browser — teammates each paste it once.</p>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+    <button class="back-btn" id="back-btn" onclick="goBack()">← Back</button>
+    <h1>Should Cost Analyzer</h1>
+    <span class="badge badge-info" id="commodity-badge" style="display:none"></span>
+  </div>
+  <p class="subtitle">AI-powered cost modeling for sourcing and procurement — Tenstorrent Global Sourcing</p>
+
+  <div class="steps" id="steps">
+    <span class="step-dot"><span class="step-num active" id="sn1">1</span><span class="step-label active" id="sl1">Commodity</span></span>
+    <span class="step-sep">›</span>
+    <span class="step-dot"><span class="step-num" id="sn2">2</span><span class="step-label" id="sl2">Details</span></span>
+    <span class="step-sep">›</span>
+    <span class="step-dot"><span class="step-num" id="sn3">3</span><span class="step-label" id="sl3">Analysis</span></span>
+  </div>
+
+  <div id="step1">
+    <div class="chip-grid">
+      <div class="chip" onclick="selectCommodity('thermal','Thermal Components')"><h3>Thermal Components</h3><p>Heatsinks, cold plates, vapor chambers, fans, TIMs, liquid cooling</p></div>
+      <div class="chip" onclick="selectCommodity('mechanical','Mechanical / Fabrication')"><h3>Mechanical / Fabrication</h3><p>Sheet metal, die cast, CNC machining, stampings, weldments</p></div>
+      <div class="chip" onclick="selectCommodity('pcb','PCB Fabrication')"><h3>PCB Fabrication</h3><p>Rigid, flex, rigid-flex, HDI, high-speed, specialty substrates</p></div>
+      <div class="chip" onclick="selectCommodity('pcba','PCBA / Board Assembly')"><h3>PCBA / Board Assembly</h3><p>SMT, THT, BGA, conformal coat, ICT, functional test</p></div>
+      <div class="chip" onclick="selectCommodity('cable','Cable Assemblies')"><h3>Cable Assemblies</h3><p>Wire harness, coax, ribbon, custom / high-speed interconnects</p></div>
+      <div class="chip" onclick="selectCommodity('molding','Injection Molding')"><h3>Injection Molding</h3><p>Thermoplastic, thermoset, overmolding, insert molding</p></div>
+      <div class="chip" onclick="selectCommodity('ems','Contract Manufacturing')"><h3>Contract Manufacturing</h3><p>Full system/box build, NPI, ODM/JDM, integration services</p></div>
+    </div>
+  </div>
+
+  <div id="step2" style="display:none">
+    <div id="drop-zone" class="drop-zone" onclick="document.getElementById('file-input').click()" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="handleDrop(event)">
+      <input type="file" id="file-input" accept="image/*,.pdf" style="display:none" onchange="handleFile(this.files[0])">
+      <div id="dz-content">
+        <p style="font-size:13px;font-weight:500;margin-bottom:4px">Upload drawing or spec sheet (optional)</p>
+        <p style="font-size:12px;color:#666">PNG, JPG, PDF — Claude will extract dimensions, materials, and features</p>
+      </div>
+      <div id="dz-preview" style="display:none">
+        <div style="display:flex;align-items:center;gap:9px;justify-content:center">
+          <span style="font-size:12px;color:#15803d;font-weight:500" id="file-name"></span>
+          <span onclick="clearFile(event)" style="font-size:11px;color:#666;cursor:pointer;padding:2px 7px;border:1px solid #d1d0c8;border-radius:6px">Remove</span>
+        </div>
+        <img id="img-thumb">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Part / Assembly Description <span id="desc-req">*</span></label>
+      <textarea id="f-desc" rows="3" placeholder="Describe the part — or upload a drawing above and leave this blank. E.g., 'Aluminum extrusion heatsink, 200×150mm base, 40 fins, black anodized, target thermal resistance ≤0.3°C/W'"></textarea>
+    </div>
+    <div class="form-row">
+      <div><label>Annual Volume (units)</label><input id="f-vol" type="number" placeholder="e.g. 5000"></div>
+      <div><label>Manufacturing Region</label>
+        <select id="f-region">
+          <option>China (mainland)</option>
+          <option>Taiwan</option>
+          <option>Southeast Asia (VN/TH/MY)</option>
+          <option>Mexico</option>
+          <option>Eastern Europe</option>
+          <option>North America</option>
+          <option>India</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Technical Specs / Materials (optional)</label>
+      <textarea id="f-specs" rows="2" placeholder="Layer count, material grade, tolerances, surface finish, compliance (RoHS, UL), test requirements..."></textarea>
+    </div>
+    <div class="form-group">
+      <label>Target Cost Goal ($/unit, optional)</label>
+      <input id="f-target" type="number" step="0.01" placeholder="e.g. 12.50" style="width:200px">
+    </div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <button class="btn-primary" id="run-btn" onclick="runAnalysis()">Run Should Cost Analysis</button>
+    </div>
+    <span class="err" id="run-err"></span>
+    <div class="loading" id="loading-bar">
+      <p style="font-size:14px;font-weight:500">Generating should-cost analysis…</p>
+      <p style="font-size:12px;color:#888;margin-top:4px" id="loading-sub">Estimating materials, labor, overhead, and regional market conditions</p>
+    </div>
+  </div>
+
+  <div id="step3" style="display:none"></div>
+
+</div>
+
+<script>
+var currentCommodity='',currentCommodityLabel='',uploadedBase64=null,uploadedMediaType=null;
+
+// ── Proxy URL (persisted in localStorage) ───────────────────
+function getProxyUrl(){return localStorage.getItem('sca_proxy_url')||'';}
+function saveProxyUrl(){var v=document.getElementById('proxy-url-input').value.trim();if(!v)return;localStorage.setItem('sca_proxy_url',v);refreshConfigBanner();}
+function refreshConfigBanner(){var url=getProxyUrl();var banner=document.getElementById('config-banner');if(url){banner.className='config-banner configured';banner.innerHTML='<div style="flex:1"><p style="font-size:13px;font-weight:500;color:#15803d;margin-bottom:2px">Proxy configured</p><p style="font-size:11px;color:#666;word-break:break-all">'+url+'</p></div><button onclick="resetProxy()" style="padding:4px 10px;font-size:12px;white-space:nowrap">Change</button>';}else{banner.className='config-banner';banner.innerHTML='<div style="flex:1"><p style="font-size:13px;font-weight:500;color:#854d0e;margin-bottom:6px">Paste your GAS Proxy URL to activate</p><div style="display:flex;gap:8px"><input id="proxy-url-input" type="text" placeholder="https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec" style="flex:1;font-size:12px"><button onclick="saveProxyUrl()" style="padding:6px 14px;font-size:13px;white-space:nowrap">Save</button></div><p style="font-size:11px;color:#999;margin-top:5px">This is saved in your browser — teammates each paste it once.</p></div>';}}
+function resetProxy(){localStorage.removeItem('sca_proxy_url');refreshConfigBanner();}
+refreshConfigBanner();
+
+// ── Commodity selection ──────────────────────────────────────
+function selectCommodity(id,label){
+  var proxyUrl=getProxyUrl();
+  if(!proxyUrl){alert('Please paste your GAS Proxy URL at the top of the page first.');return;}
+  currentCommodity=id;currentCommodityLabel=label;
+  document.getElementById('step1').style.display='none';
+  document.getElementById('step2').style.display='block';
+  document.getElementById('commodity-badge').textContent=label;
+  document.getElementById('commodity-badge').style.display='inline';
+  document.getElementById('back-btn').style.display='inline';
+  setStep(2);
+}
+
+function goBack(){var s3=document.getElementById('step3');if(s3.style.display!=='none'){s3.style.display='none';document.getElementById('step2').style.display='block';setStep(2);}else{document.getElementById('step2').style.display='none';document.getElementById('step1').style.display='block';document.getElementById('commodity-badge').style.display='none';document.getElementById('back-btn').style.display='none';currentCommodity='';setStep(1);}}
+
+function setStep(n){for(var i=1;i<=3;i++){var num=document.getElementById('sn'+i);var lbl=document.getElementById('sl'+i);if(i<=n){num.className='step-num active';lbl.className='step-label active';}else{num.className='step-num';lbl.className='step-label';}}}
+
+// ── File handling ────────────────────────────────────────────
+function handleDrop(ev){ev.preventDefault();document.getElementById('drop-zone').classList.remove('drag-over');var f=ev.dataTransfer.files[0];if(f)handleFile(f);}
+
+function handleFile(file){if(!file)return;var mt=file.type;if(mt==='application/pdf')uploadedMediaType='application/pdf';else if(mt.startsWith('image/'))uploadedMediaType=mt;else{alert('Please upload a PNG, JPG, or PDF.');return;}
+var reader=new FileReader();reader.onload=function(e){uploadedBase64=e.target.result.split(',')[1];var dz=document.getElementById('drop-zone');dz.classList.add('has-file');document.getElementById('dz-content').style.display='none';document.getElementById('dz-preview').style.display='block';document.getElementById('file-name').textContent=file.name;var thumb=document.getElementById('img-thumb');if(mt.startsWith('image/')){thumb.src=e.target.result;thumb.style.display='block';}else{thumb.style.display='none';}
+document.getElementById('desc-req').textContent='';document.getElementById('f-desc').placeholder='Drawing uploaded — add any additional context here (optional)';};reader.readAsDataURL(file);}
+
+function clearFile(ev){if(ev&&ev.stopPropagation)ev.stopPropagation();uploadedBase64=null;uploadedMediaType=null;document.getElementById('file-input').value='';var dz=document.getElementById('drop-zone');dz.classList.remove('has-file');document.getElementById('dz-content').style.display='block';document.getElementById('dz-preview').style.display='none';document.getElementById('img-thumb').style.display='none';document.getElementById('desc-req').textContent='*';document.getElementById('f-desc').placeholder='Describe the part...';}
+
+// ── Run analysis via GAS proxy ───────────────────────────────
+async function runAnalysis(){
+  var desc=document.getElementById('f-desc').value.trim();
+  var errEl=document.getElementById('run-err');
+  if(!desc&&!uploadedBase64){errEl.textContent='Add a description or upload a drawing.';errEl.style.display='block';return;}
+  errEl.style.display='none';
+  document.getElementById('run-btn').disabled=true;
+  document.getElementById('loading-bar').style.display='block';
+  if(uploadedBase64)document.getElementById('loading-sub').textContent='Reading drawing and estimating cost structure…';
+  else document.getElementById('loading-sub').textContent='Estimating materials, labor, overhead, and regional market conditions…';
+
+  var vol=document.getElementById('f-vol').value;
+  var region=document.getElementById('f-region').value;
+  var specs=document.getElementById('f-specs').value;
+  var target=document.getElementById('f-target').value;
+
+  var textContent='Commodity: '+currentCommodityLabel+'\nDescription: '+(desc||'See drawing.')+'\nAnnual Volume: '+(vol||'Not specified')+' units\nManufacturing Region: '+region+'\nSpecs/Materials: '+(specs||'Not specified')+'\nTarget Cost Goal: '+(target?'$'+target+'/unit':'Not specified')+'\n\nGenerate a complete should-cost analysis with realistic dollar amounts.';
+
+  var userContent=[];
+  if(uploadedBase64){
+    if(uploadedMediaType==='application/pdf')userContent.push({type:'document',source:{type:'base64',media_type:'application/pdf',data:uploadedBase64}});
+    else userContent.push({type:'image',source:{type:'base64',media_type:uploadedMediaType,data:uploadedBase64}});
+  }
+  userContent.push({type:'text',text:textContent});
+
+  var proxyUrl=getProxyUrl();
+  try{
+    var resp=await fetch(proxyUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:userContent}]})});
+    var data=await resp.json();
+    if(!data.ok)throw new Error(data.error||'Proxy error');
+    var clean=data.content.replace(/```json|```/g,'').trim();
+    var result=JSON.parse(clean);
+    renderResult(result,target);
+    document.getElementById('step2').style.display='none';
+    document.getElementById('step3').style.display='block';
+    setStep(3);
+  }catch(e){
+    errEl.textContent='Analysis failed: '+e.message;errEl.style.display='block';
+  }
+  document.getElementById('run-btn').disabled=false;
+  document.getElementById('loading-bar').style.display='none';
+}
+
+// ── Render results ───────────────────────────────────────────
+function tagClass(l){return l==='High'?'tag-high':l==='Medium'?'tag-medium':'tag-low';}
+function metricColor(l){return l==='High'?'#b91c1c':l==='Medium'?'#854d0e':'#15803d';}
+
+function renderResult(r,targetStr){
+  var target=parseFloat(targetStr)||0;var vsTarget='';
+  if(target>0){var diff=(r.total_unit_cost-target).toFixed(2);var over=r.total_unit_cost>target;vsTarget='<div class="metric"><div class="metric-label">vs. Target</div><div class="metric-val" style="color:'+(over?'#b91c1c':'#15803d')+'">'+(over?'+':'')+diff+'</div></div>';}
+  var cbRows=(r.cost_breakdown||[]).map(function(row){return'<tr><td>'+row.category+'</td><td class="mono" style="text-align:right;width:80px">$'+(row.amount||0).toFixed(2)+'</td><td class="mono" style="text-align:right;width:50px;color:#666">'+row.pct+'%</td><td style="padding-left:12px;color:#666;font-size:12px">'+(row.notes||'')+'</td></tr>';}).join('');
+  var levers=(r.negotiation_levers||[]).map(function(l){return'<div class="lever-item"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px"><span style="font-size:13px;font-weight:500">'+l.lever+'</span><span class="mono" style="font-size:12px;color:#15803d;font-weight:500">'+l.potential_savings+'</span></div><p style="font-size:12px;color:#666;line-height:1.5">'+l.approach+'</p></div>';}).join('');
+  var risks=(r.risks||[]).map(function(risk){return'<div class="risk-item"><div style="display:flex;align-items:center;gap:7px;margin-bottom:3px"><span class="tag '+tagClass(risk.level)+'">'+risk.level+'</span><span style="font-size:13px;font-weight:500">'+risk.risk+'</span></div><p style="font-size:12px;color:#666;line-height:1.5">'+risk.mitigation+'</p></div>';}).join('');
+  var assump=(r.assumptions||[]).map(function(a){return'<tr><td style="color:#666;width:42%">'+a.item+'</td><td style="font-weight:500">'+a.value+'</td></tr>';}).join('');
+  var drivers=(r.cost_drivers||[]).map(function(d){return'<div class="driver-item"><span class="tag '+tagClass(d.impact)+'" style="margin-top:1px">'+d.impact+'</span><div><p style="font-size:13px;font-weight:500;margin-bottom:1px">'+d.driver+'</p><p style="font-size:12px;color:#666">'+d.notes+'</p></div></div>';}).join('');
+  var drawingBanner=r.drawing_notes?'<div class="drawing-banner"><p style="font-size:12px;font-weight:500;color:#1d4ed8;margin-bottom:3px">Extracted from drawing</p><p style="font-size:13px;line-height:1.55">'+r.drawing_notes+'</p></div>':'';
+  var missing='';if(r.missing_inputs&&r.missing_inputs.length>0){var pills=r.missing_inputs.map(function(m){return'<span class="pill">'+m+'</span>';}).join('');missing='<div class="missing-banner"><p style="font-size:12px;font-weight:500;color:#854d0e;margin-bottom:7px">Provide these inputs to improve accuracy:</p><div>'+pills+'</div></div>';}
+  var confScore=(r.confidence_level||{}).score||'';var confNote=(r.confidence_level||{}).rationale||'';
+  document.getElementById('step3').innerHTML=drawingBanner+'<div class="metric-grid"><div class="metric"><div class="metric-label">Should Cost</div><div class="metric-val">$'+(r.total_unit_cost||0).toFixed(2)+'</div></div><div class="metric"><div class="metric-label">Target Sell Price</div><div class="metric-val">$'+(r.target_sell_price||0).toFixed(2)+'</div></div>'+vsTarget+'<div class="metric"><div class="metric-label">Confidence</div><div class="metric-val" style="color:'+metricColor(confScore)+'">'+confScore+'</div></div></div><div class="card"><p class="section-label">Executive Summary</p><p style="font-size:14px;line-height:1.65">'+r.executive_summary+'</p></div><div class="card"><p class="section-label">Cost Breakdown</p><table><thead><tr><th>Category</th><th style="text-align:right">$/unit</th><th style="text-align:right">%</th><th style="padding-left:12px">Notes</th></tr></thead><tbody>'+cbRows+'</tbody><tfoot><tr><td style="font-weight:500;border-top:2px solid #e5e4de;padding-top:8px">Total</td><td class="mono" style="text-align:right;font-weight:500;border-top:2px solid #e5e4de;padding-top:8px">$'+(r.total_unit_cost||0).toFixed(2)+'</td><td class="mono" style="text-align:right;font-weight:500;border-top:2px solid #e5e4de;padding-top:8px">100%</td><td style="border-top:2px solid #e5e4de"></td></tr></tfoot></table></div><div class="two-col"><div class="card"><p class="section-label">Negotiation Levers</p>'+levers+'</div><div class="card"><p class="section-label">Risks</p>'+risks+'</div></div><div class="two-col"><div class="card"><p class="section-label">Key Assumptions</p><table><tbody>'+assump+'</tbody></table></div><div class="card"><p class="section-label">Key Cost Drivers</p>'+drivers+'</div></div>'+missing+(confNote?'<p style="font-size:12px;color:#999;margin-top:8px">Confidence ('+confScore+'): '+confNote+'</p>':'')+'<button onclick="resetAll()" style="margin-top:8px">← New Analysis</button>';
+}
+
+function resetAll(){document.getElementById('step3').style.display='none';document.getElementById('step3').innerHTML='';document.getElementById('step2').style.display='none';document.getElementById('step1').style.display='block';document.getElementById('commodity-badge').style.display='none';document.getElementById('back-btn').style.display='none';document.getElementById('f-desc').value='';document.getElementById('f-vol').value='';document.getElementById('f-specs').value='';document.getElementById('f-target').value='';clearFile(null);currentCommodity='';setStep(1);}
+</script>
+</body>
+</html>
